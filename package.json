@@ -1,0 +1,21 @@
+{
+  "name": "ms-bot",
+  "version": "1.0.0",
+  "description": "Chatbot criado com o Microsoft Bot Framework",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [
+    "chatbot",
+    "microsoft",
+    "bot",
+    "framework"
+  ],
+  "author": "Reginaldo Santos (reginaldosantos.br@gmail.com)",
+  "license": "ISC",
+  "dependencies": {
+    "botbuilder": "^3.14.0",
+    "restify": "^6.3.4"
+  }
+}
