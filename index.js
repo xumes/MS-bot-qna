@@ -1,5 +1,6 @@
 const builder = require('botbuilder')
 const restify = require('restify')
+const cognitiveservices = require('botbuilder-cognitiveservices')
 
 //Configura o servidor Restify
 const server = restify.createServer()
@@ -16,6 +17,17 @@ const connector = new builder.ChatConnector({
 //Endpoint que irá monitorar as mensagens do usuário
 server.post('/api/messages', connector.listen())
 
-const bot = new builder.UniversalBot(connector, (session) => {
-    session.send('Você disse: %s', session.message.text);
-})
+const bot = new builder.UniversalBot(connector)
+
+var recognizer = new cognitiveservices.QnAMakerRecognizer({
+	knowledgeBaseId: process.env.KNOWLEDGE_BASE_ID,
+	subscriptionKey: process.env.SUBSCRIPTION_KEY_ID
+});
+
+var basicQnaMakerDialog = new cognitiveservices.QnAMakerDialog({
+	recognizers: [recognizer],
+	defaultMessage: "Ops, alguma coisa aconteceu",
+	qnaThreshold: 0.3
+});
+
+bot.dialog('/', basicQnaMakerDialog);
