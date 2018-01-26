@@ -1,6 +1,7 @@
 const builder = require('botbuilder')
 const restify = require('restify')
-const cognitiveservices = require('botbuilder-cognitiveservices')
+const cognitiveServices = require('botbuilder-cognitiveservices')
+require('dotenv').config()
 
 //Configura o servidor Restify
 const server = restify.createServer()
@@ -15,19 +16,43 @@ const connector = new builder.ChatConnector({
 })
 
 //Endpoint que irá monitorar as mensagens do usuário
+const bot = new builder.UniversalBot(connector)
+bot.set('storage', new builder.MemoryBotStorage())
 server.post('/api/messages', connector.listen())
 
-const bot = new builder.UniversalBot(connector)
+console.log(process.env.KNOWLEDGE_BASE_ID)
+console.log(process.env.SUBSCRIPTION_KEY_ID)
 
-var recognizer = new cognitiveservices.QnAMakerRecognizer({
+var recognizer = new cognitiveServices.QnAMakerRecognizer({
 	knowledgeBaseId: process.env.KNOWLEDGE_BASE_ID,
-	subscriptionKey: process.env.SUBSCRIPTION_KEY_ID
+    subscriptionKey: process.env.SUBSCRIPTION_KEY_ID,
+    top: 3
 });
 
-var basicQnaMakerDialog = new cognitiveservices.QnAMakerDialog({
-	recognizers: [recognizer],
-	defaultMessage: "Ops, alguma coisa aconteceu",
-	qnaThreshold: 0.3
-});
+const qnaMakerTools = new cognitiveServices.QnAMakerTools()
+bot.library(qnaMakerTools.createLibrary())
 
-bot.dialog('/', basicQnaMakerDialog);
+const basicQnaMakerDialog = new cognitiveServices.QnAMakerDialog({
+  recognizers: [recognizer],
+  defaultMessage: 'Não encontrado! Tente alterar os termos da pergunta!',
+  qnaThreshold: 0.5,
+  feedbackLib: qnaMakerTools
+})
+
+basicQnaMakerDialog.respondFromQnAMakerResult = (session, qnaMakerResult) => {
+    const firstAnswer = qnaMakerResult.answers[0].answer
+    const composedAnswer = firstAnswer.split(';')
+    if (composedAnswer.length === 1) {
+    return session.send(firstAnswer)
+    }
+    const [title, description, url, image] = composedAnswer
+    const card = new builder.HeroCard(session)
+        .title(title)
+        .text(description)
+        .images([builder.CardImage.create(session, image.trim())])
+        .buttons([builder.CardAction.openUrl(session, url.trim(), 'Comprar agora')])
+    const reply = new builder.Message(session).addAttachment(card)
+    session.send(reply)
+}
+
+bot.dialog('/', basicQnaMakerDialog)
